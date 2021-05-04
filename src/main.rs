@@ -21,8 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     dotenv::dotenv()?;
 
-    let input_file = env::var("AO3_HTML_EXPORT_FILE")
-        .expect("AO3_HTML_EXPORT_FILE not set");
+    let input_file = env::var("AO3_HTML_EXPORT_FILE").expect("AO3_HTML_EXPORT_FILE not set");
 
     log::info!("loading input file: {}", &input_file);
     let texts = data::load_text(&input_file).await?;

@@ -35,7 +35,7 @@ impl GApiClient {
         let fetcher =
             TokenFetcher::with_client(client.clone(), jwt, credentials, Duration::new(1, 0));
 
-        Self { fetcher, client }
+        Self { client, fetcher }
     }
 
     pub async fn generate_text(&self, text: &str) -> Result<Vec<u8>, Box<dyn Error>> {

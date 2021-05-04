@@ -1,4 +1,4 @@
-use std::{error::Error, io::Write};
+use std::{error::Error, fmt::Debug, io::Write, path::Path};
 
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use scraper::{Html, Selector};
@@ -6,7 +6,7 @@ use tokio::{fs::File, io::AsyncReadExt};
 
 use crate::runner::ProcessedData;
 
-pub(crate) async fn load_text(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
+pub(crate) async fn load_text<P: AsRef<Path>>(path: P) -> Result<Vec<String>, Box<dyn Error>> {
     let mut file = File::open(path).await?;
     let mut data = String::new();
 
@@ -31,12 +31,38 @@ pub(crate) async fn load_text(path: &str) -> Result<Vec<String>, Box<dyn Error>>
         .collect())
 }
 
+pub(crate) async fn load_preprocessed<P: AsRef<Path> + Debug>(
+    buffer: &mut Vec<u8>,
+    state_file: P,
+) -> Result<ProcessedData<'_>, Box<dyn Error>> {
+    log::debug!("trying to load state dump from {:?}", state_file);
+
+    Ok(match File::open(state_file).await {
+        Ok(mut file) => {
+            log::info!("found existing state dump, loading");
+            file.read_to_end(buffer).await?;
+
+            bincode::deserialize(buffer).unwrap_or_else(|_| {
+                log::warn!("invalid format in state dump, falling back to Default");
+                Default::default()
+            })
+        }
+        Err(_) => {
+            log::info!("no dump present, falling back to Default");
+            Default::default()
+        }
+    })
+}
+
 pub(crate) fn save_mp3s(
     texts: &[String],
     data: ProcessedData<'_>,
     output_dir: &str,
     ffmpeg_input_path: &str,
 ) -> Result<(), Box<dyn Error>> {
+    // this part takes about 2 seconds on my notebook,
+    // dominated by disk busy time,
+    // so I didn't bothered to make it async
     let mut ffmpeg_input = std::fs::File::create(ffmpeg_input_path)?;
     std::fs::create_dir_all(output_dir)?;
 
@@ -53,7 +79,7 @@ pub(crate) fn save_mp3s(
         let mut f = std::fs::File::create(path)?;
 
         let data = data.0.get(text.as_str()).expect("no data for text");
-        if data.len() > 0 {
+        if !data.is_empty() {
             log::info!(
                 "writing out {} bytes for text of size {}",
                 data.len(),
@@ -71,27 +97,4 @@ pub(crate) fn save_mp3s(
     }
 
     Ok(())
-}
-
-pub(crate) async fn load_preprocessed<'a>(
-    buffer: &'a mut Vec<u8>,
-    state_file: &str,
-) -> Result<ProcessedData<'a>, Box<dyn Error>> {
-    log::debug!("trying to load state dump from {}", state_file);
-
-    Ok(match File::open(state_file).await {
-        Ok(mut file) => {
-            log::info!("found existing state dump, loading");
-            file.read_to_end(buffer).await?;
-
-            bincode::deserialize(buffer).unwrap_or_else(|_| {
-                log::warn!("invalid format in state dump, falling back to Default");
-                Default::default()
-            })
-        }
-        Err(_) => {
-            log::info!("no dump present, falling back to Default");
-            Default::default()
-        }
-    })
 }
