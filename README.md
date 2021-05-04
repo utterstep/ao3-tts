@@ -26,5 +26,4 @@ AO3_HTML_EXPORT_FILE=./all-the-young-dudes.html
 
 Currently, the TTS engine used is [Google Cloud Text-To-Speech API](https://cloud.google.com/text-to-speech) with [hardcoded parameters](./src/gcloud_api.rs#L50..L63).
 
-TTSed text automatically dumped on drive every 25 sentences to ensure that in case of emergency
-not much of (paid for) generated text would be lost.
+TTSed text is dumped on drive automatically every 25 sentences, so that not much of paid for, generated text is lost in case of emergency.
