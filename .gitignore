@@ -1,0 +1,10 @@
+.DS_Store
+
+/target
+/output
+.env
+
+*.html
+*.bin
+*.mp3
+*.txt
