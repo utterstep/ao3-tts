@@ -1,10 +1,10 @@
-use std::{error::Error, fmt::Debug, io::Write, path::Path};
+use std::{convert::TryInto, error::Error, fmt::Debug, io::Write, path::Path};
 
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use scraper::{Html, Selector};
-use tokio::{fs::File, io::AsyncReadExt};
+use tokio::{fs::{File, metadata}, io::AsyncReadExt};
 
-use crate::runner::ProcessedData;
+use crate::datatypes::ProcessedData;
 
 pub(crate) async fn load_text<P: AsRef<Path>>(path: P) -> Result<Vec<String>, Box<dyn Error>> {
     let mut file = File::open(path).await?;
@@ -37,10 +37,24 @@ pub(crate) async fn load_preprocessed<P: AsRef<Path> + Debug>(
 ) -> Result<ProcessedData<'_>, Box<dyn Error>> {
     log::debug!("trying to load state dump from {:?}", state_file);
 
-    Ok(match File::open(state_file).await {
+    let meta = metadata(&state_file).await?;
+    let filesize: usize = meta.len().try_into()?;
+    const EXTRA_BUFFER_SLACK: usize = 256;
+
+    log::debug!(
+        "file size is {}, preallocating {}",
+        filesize,
+        filesize + EXTRA_BUFFER_SLACK,
+    );
+    buffer.reserve(filesize + EXTRA_BUFFER_SLACK);
+    log::debug!("buffer capacity before readout is {}", buffer.capacity());
+
+    Ok(match File::open(&state_file).await {
         Ok(mut file) => {
             log::info!("found existing state dump, loading");
             file.read_to_end(buffer).await?;
+
+            log::debug!("buffer capacity after readout is {}", buffer.capacity());
 
             bincode::deserialize(buffer).unwrap_or_else(|_| {
                 log::warn!("invalid format in state dump, falling back to Default");

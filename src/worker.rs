@@ -4,7 +4,7 @@ use crossbeam::deque::{Injector, Steal, Worker as WorkerQueue};
 use reqwest::Client;
 use tokio::{sync::mpsc::UnboundedSender, time::sleep};
 
-use crate::gcloud_api::GApiClient;
+use crate::{datatypes::CowBytes, gcloud_api::GApiClient};
 
 const ERROR_LIMIT: usize = 20;
 const DURATION_ZERO: Duration = Duration::from_millis(0);
@@ -16,7 +16,7 @@ pub(crate) struct Worker<'a, 'b> {
     injector: &'b Injector<&'a str>,
 
     gapi: GApiClient,
-    sender: UnboundedSender<(&'a str, Vec<u8>)>,
+    sender: UnboundedSender<(&'a str, CowBytes<'a>)>,
     id: usize,
 }
 
@@ -24,7 +24,7 @@ impl<'a, 'b> Worker<'a, 'b> {
     pub(crate) fn new(
         client: Client,
         injector: &'b Injector<&'a str>,
-        sender: UnboundedSender<(&'a str, Vec<u8>)>,
+        sender: UnboundedSender<(&'a str, CowBytes<'a>)>,
         id: usize,
     ) -> Self {
         Self {
@@ -117,7 +117,7 @@ impl<'a, 'b> Worker<'a, 'b> {
             log::debug!("Worker {} done working on {}", self.id, job);
             log::debug!("Worker {} done another job", self.id);
 
-            match self.sender.send((job, data)) {
+            match self.sender.send((job, data.into())) {
                 Ok(()) => {}
                 Err(e) => {
                     log::error!("Initiating system shutdown due to failed message send");

@@ -4,10 +4,11 @@ use std::env;
 
 use crate::{
     data::{load_preprocessed, save_mp3s},
-    runner::ProcessedData,
+    datatypes::ProcessedData,
 };
 
 mod data;
+mod datatypes;
 mod gcloud_api;
 mod runner;
 mod worker;

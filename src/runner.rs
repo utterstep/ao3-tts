@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeSet,
     convert::TryInto,
     ops::Deref,
     sync::{Arc, Mutex},
@@ -9,17 +9,13 @@ use std::{
 use crossbeam::deque::Injector;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::ClientBuilder;
-use serde::{Deserialize, Serialize};
 use tokio::{
     fs::{rename, File},
     io::AsyncWriteExt,
     sync::mpsc::unbounded_channel,
 };
 
-use crate::worker::Worker;
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-pub(crate) struct ProcessedData<'a>(#[serde(borrow)] pub BTreeMap<&'a str, Vec<u8>>);
+use crate::{datatypes::ProcessedData, worker::Worker};
 
 #[derive(Debug)]
 pub(crate) struct Runner<'a> {
